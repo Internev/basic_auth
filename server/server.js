@@ -1,24 +1,42 @@
 const express = require('express')
-const path = require('path')
+// const path = require('path')
 const session = require('express-session')
 const bodyParser = require('body-parser')
-require('dotenv').config({path: './config/cf.env'})
-// const dbRoutes = require('./db/dbRoutes')
+const cookieParser = require('cookie-parser')
+const passport = require('passport')
+const flash = require('connect-flash')
+const morgan = require('morgan')
+const authRoutes = require('./db/authRoutes')
+
 let app = express()
+require('dotenv').config({path: './config/cf.env'})
+require('./db/passport')(passport)
 
 let port = process.env.PORT || 3000
 
-console.log(process.env.TEST)
-
 app
-  .use(express.static(path.join(__dirname, '../client')))
-  .use(bodyParser.json())
+  // .use(express.static(path.join(__dirname, '../client')))
+  .use(morgan('dev'))
+  .use(cookieParser())
+  .use(bodyParser())
   .use(session({
     secret: 'AxlotlBadgerstone',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000
+      // secure: true
+    }
   }))
-  .get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client', 'index.html'))
-  })
+  .set('view engine', 'ejs')
+  .use(passport.initialize())
+  .use(passport.session())
+  .use(flash())
+
+authRoutes(app, passport)
+
+app
+  // .get('*', (req, res) => {
+  //   res.sendFile(path.resolve(__dirname, '../client', 'index.html'))
+  // })
   .listen(port, () => { console.log(`Server listening on ${port}`) })
